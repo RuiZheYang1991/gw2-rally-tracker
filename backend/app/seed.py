@@ -33,13 +33,13 @@ PROFESSIONS = [
     _p("bladesworn", "刃枪士", "Bladesworn", "warrior", "heavy", "elite", "#C9A227", 103),
     _p("paragon", "圣言士", "Paragon", "warrior", "heavy", "upcoming", "#FFE6A0", 104),
     _p("guardian", "守护者", "Guardian", "guardian", "heavy", "core", G, 110),
-    _p("dragonhunter", "龙魂使", "Dragonhunter", "guardian", "heavy", "elite", "#5BA8C4", 111),
+    _p("dragonhunter", "猎龙", "Dragonhunter", "guardian", "heavy", "elite", "#5BA8C4", 111),
     _p("firebrand", "炎使", "Firebrand", "guardian", "heavy", "elite", "#8FD4E8", 112),
     _p("willbender", "毅行者", "Willbender", "guardian", "heavy", "elite", "#4E90B0", 113),
     _p("luminary", "流明使", "Luminary", "guardian", "heavy", "upcoming", "#B8E8F4", 114),
     _p("revenant", "魂武者", "Revenant", "revenant", "heavy", "core", R, 120),
     _p("herald", "先知", "Herald", "revenant", "heavy", "elite", "#E08A78", 121),
-    _p("renegade", "叛乱者", "Renegade", "revenant", "heavy", "elite", "#B85A48", 122),
+    _p("renegade", "龙魂使", "Renegade", "revenant", "heavy", "elite", "#B85A48", 122),
     _p("vindicator", "判官", "Vindicator", "revenant", "heavy", "elite", "#C97A68", 123),
     _p("conduit", "契灵使", "Conduit", "revenant", "heavy", "upcoming", "#F0A898", 124),
     # 中甲 · 冒险家
@@ -77,9 +77,9 @@ PROFESSIONS = [
 
 # key 存库；duty 对外固定为 Tank / DPS / Support
 ROLES = [
-    {"key": "tank", "name_zh": "坦", "name_en": "Tank", "color": "#C45C5C", "sort_order": 1},
-    {"key": "dps", "name_zh": "DPS", "name_en": "DPS", "color": "#E8A317", "sort_order": 2},
-    {"key": "support", "name_zh": "辅助", "name_en": "Support", "color": "#7EC8E3", "sort_order": 3},
+    {"key": "dps", "name_zh": "输出", "name_en": "DPS", "color": "#E8A317", "sort_order": 1},
+    {"key": "support", "name_zh": "辅助", "name_en": "Support", "color": "#7EC8E3", "sort_order": 2},
+    {"key": "tank", "name_zh": "坦", "name_en": "Tank", "color": "#C45C5C", "sort_order": 3},
 ]
 
 DUTY_BY_KEY = {"tank": "Tank", "dps": "DPS", "support": "Support"}

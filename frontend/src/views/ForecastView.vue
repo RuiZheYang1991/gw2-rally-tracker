@@ -1,17 +1,17 @@
 <template>
   <div>
     <section class="panel">
-      <h2>本周预计出勤</h2>
-      <p class="hint">横轴为星期，纵轴为勾选该晚的去重人数。缺坦 / 缺 DPS / 缺辅助的格子会用红色虚线标出。</p>
+      <h2>{{ t("forecastTitle") }}</h2>
+      <p class="hint">{{ t("forecastHint") }}</p>
       <div class="chart-box">
-        <Gw2Chart v-if="barData" type="bar" :data="barData" :options="barOptions" />
+        <Gw2Chart v-if="barData" :key="'fc-' + locale" type="bar" :data="barData" :options="barOptions" />
       </div>
     </section>
 
     <div class="week-board">
       <article v-for="day in forecast.days || []" :key="day.weekday" class="panel day-col">
         <header class="day-head">
-          <span>{{ day.weekday_zh }}</span>
+          <span>{{ weekdayLabel(day.weekday) }}</span>
           <strong>{{ day.unique_people }}</strong>
         </header>
         <div
@@ -21,14 +21,14 @@
           :class="{ vacant: block.vacant }"
         >
           <h3>
-            {{ block.name_zh }}
+            <span class="notranslate">{{ displayName(matchRole(block)) }}</span>
             <em>{{ block.count }}</em>
           </h3>
-          <div v-if="block.vacant" class="empty-slot">空缺</div>
+          <div v-if="block.vacant" class="empty-slot">{{ t("vacant") }}</div>
           <div v-else class="prof-groups">
             <div v-for="g in block.professions" :key="g.profession_key" class="prof-group">
-              <p>
-                {{ block.name_zh }}-{{ g.name_zh }}
+              <p class="notranslate">
+                {{ displayName(matchRole(block)) }}-{{ displayName(matchProf(g)) }}
                 <b>×{{ g.count }}</b>
               </p>
               <div class="nicks">
@@ -46,17 +46,29 @@
 import { computed, onMounted, ref } from "vue";
 import { api } from "../api";
 import Gw2Chart from "../components/Gw2Chart.vue";
+import { displayName, locale, t, weekdayLabel } from "../i18n";
 
 const forecast = ref({ days: [] });
+const roles = ref([]);
+const professions = ref([]);
+
+function matchRole(item) {
+  return roles.value.find((r) => r.key === item.key) || item;
+}
+
+function matchProf(item) {
+  return professions.value.find((p) => p.key === item.profession_key) || item;
+}
 
 const barData = computed(() => {
+  locale.value;
   const days = forecast.value.days || [];
   if (!days.length) return null;
   return {
-    labels: days.map((d) => d.weekday_zh),
+    labels: days.map((d) => weekdayLabel(d.weekday)),
     datasets: [
       {
-        label: "预计人数",
+        label: t("expected"),
         data: days.map((d) => d.unique_people),
         backgroundColor: days.map((d) =>
           d.roles.some((r) => r.vacant) ? "rgba(212,106,106,.75)" : "rgba(232,195,106,.8)"
@@ -71,6 +83,8 @@ const barOptions = {
 };
 
 onMounted(async () => {
+  roles.value = await api.roles();
+  professions.value = await api.professions();
   forecast.value = await api.weeklyForecast();
 });
 </script>

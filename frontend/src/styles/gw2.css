@@ -92,8 +92,30 @@ select {
   text-shadow: 0 0 12px rgba(232, 195, 106, 0.25);
 }
 
-.shell-wide {
-  max-width: 1440px;
+.topbar-right {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+}
+
+.lang-switch {
+  display: flex;
+  border: 1px solid var(--gold-dim);
+}
+
+.lang-switch button {
+  padding: 6px 10px;
+  border: none;
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+  letter-spacing: 0.08em;
+}
+
+.lang-switch button.active {
+  background: rgba(232, 195, 106, 0.16);
+  color: var(--gold-bright);
 }
 
 .nav {
@@ -266,9 +288,12 @@ select {
 }
 
 .prof-card :deep(svg),
-.icon-slot svg {
+.prof-card :deep(img),
+.icon-slot svg,
+.icon-slot img {
   width: 48px;
   height: 48px;
+  object-fit: contain;
 }
 
 .prof-card strong {

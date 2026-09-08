@@ -85,14 +85,14 @@ def _align_roles(conn) -> None:
         conn.execute(
             text(
                 "INSERT INTO roles (key, name_zh, name_en, color, sort_order) "
-                "VALUES ('tank', '坦', 'Tank', '#C45C5C', 1)"
+                "VALUES ('tank', '坦', 'Tank', '#C45C5C', 3)"
             )
         )
         rows = {r[0]: r[1] for r in conn.execute(text("SELECT key, id FROM roles"))}
 
-    conn.execute(text("UPDATE roles SET name_zh='坦', name_en='Tank', color='#C45C5C', sort_order=1 WHERE key='tank'"))
-    conn.execute(text("UPDATE roles SET name_zh='DPS', name_en='DPS', color='#E8A317', sort_order=2 WHERE key='dps'"))
-    conn.execute(text("UPDATE roles SET name_zh='辅助', name_en='Support', color='#7EC8E3', sort_order=3 WHERE key='support'"))
+    conn.execute(text("UPDATE roles SET name_zh='输出', name_en='DPS', color='#E8A317', sort_order=1 WHERE key='dps'"))
+    conn.execute(text("UPDATE roles SET name_zh='辅助', name_en='Support', color='#7EC8E3', sort_order=2 WHERE key='support'"))
+    conn.execute(text("UPDATE roles SET name_zh='坦', name_en='Tank', color='#C45C5C', sort_order=3 WHERE key='tank'"))
 
     if "heal" in rows and "support" in rows:
         heal_id, support_id = rows["heal"], rows["support"]

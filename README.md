@@ -42,6 +42,36 @@ docker compose up -d
 
 SQLite 挂载在宿主机 `./data/rally.db`，容器重启不会丢数据。
 
+### 虚拟机上经常改代码：pull 后一并更新镜像
+
+`git pull` **不会**自动重建 Docker 镜像。以后在虚拟机里用这一条即可（拉代码 + 按变更重建前后端镜像 + 重启）：
+
+```bash
+chmod +x update.sh   # 只需第一次
+./update.sh
+```
+
+或：
+
+```bash
+make update
+```
+
+等价于手动执行：
+
+```bash
+git pull
+docker-compose up -d --build
+```
+
+`--build` 会在源码变化时重建镜像；未改过的层仍走缓存，一般比 `--no-cache` 快。若前端样式还是旧的，再跑一次清缓存构建：
+
+```bash
+./update.sh --no-cache
+```
+
+然后在浏览器 **Ctrl+F5** 强刷，避免用到旧的打包 CSS。
+
 常见问题：
 
 - `Couldn't connect to Docker daemon`：先 `sudo systemctl start docker`，或把当前用户加入 `docker` 组后重新登录。
@@ -103,9 +133,17 @@ npm run dev
 - `GET /api/weekly?nickname=`　`PUT /api/weekly`
 - `GET /api/weekly/forecast`
 
-## 替换职业图标
+## 职业图标
 
-编辑 `frontend/src/icons.js`，按职业 `key` 换成官方图或 SVG，无需改后端。
+彩色高清图标来自 [GW2 Wiki: Profession icons](https://wiki.guildwars2.com/wiki/Guild_Wars_2_Wiki:Profession_icons)，保存在 `frontend/public/img/professions/{key}.png`（优先 highres）。版权归属 ArenaNet / Wiki 授权条款，仅供本工具展示。
+
+重新下载：
+
+```bash
+python scripts/download_profession_icons.py
+```
+
+若 PNG 缺失，界面会回退到 `frontend/src/icons.js` 的占位 SVG。
 
 ## 目录结构
 

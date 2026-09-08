@@ -1,17 +1,31 @@
 <template>
   <div class="layout">
     <section class="panel">
-      <h2>登记今晚职业</h2>
-      <p class="hint">核心与特化都是独立职业，选一个即可。同一人可提交多条不同组合。虚线为即将推出的特化。</p>
+      <h2>{{ t("checkinTitle") }}</h2>
+      <p class="hint">{{ t("checkinHint") }}</p>
 
       <label class="field">
-        <span>公会昵称</span>
-        <input v-model="nickname" maxlength="32" placeholder="例如：影织者" />
+        <span>{{ t("nickname") }}</span>
+        <input v-model="nickname" maxlength="32" :placeholder="t('nickPlaceholder')" />
       </label>
       <label class="field">
-        <span>集会日期</span>
+        <span>{{ t("rallyDate") }}</span>
         <input v-model="rallyDate" type="date" />
       </label>
+
+      <div class="roles">
+        <button
+          v-for="r in roles"
+          :key="r.key"
+          type="button"
+          class="role-card notranslate"
+          :class="{ active: roleKey === r.key }"
+          @click="roleKey = r.key"
+        >
+          <strong>{{ displayName(r) }}</strong>
+          <em v-if="locale === 'zh'">{{ r.name_en }}</em>
+        </button>
+      </div>
 
       <div class="armor-list">
         <section v-for="group in armorGroups" :key="group.armor" class="armor-block">
@@ -33,41 +47,26 @@
                 :family-key="p.family_key"
                 :color="p.color"
               />
-              <strong>{{ p.name_zh }}</strong>
-              <em>{{ specKindLabel(p) }}</em>
+              <strong class="notranslate">{{ displayName(p) }}</strong>
             </button>
           </div>
         </section>
       </div>
 
-      <div class="roles">
-        <button
-          v-for="r in roles"
-          :key="r.key"
-          type="button"
-          class="role-card"
-          :class="{ active: roleKey === r.key }"
-          @click="roleKey = r.key"
-        >
-          <strong>{{ r.name_zh }}</strong>
-          <em>{{ r.name_en }}</em>
-        </button>
-      </div>
-
-      <button class="gold-btn" :disabled="busy" @click="submit">确认出席</button>
+      <button class="gold-btn" :disabled="busy" @click="submit">{{ t("confirm") }}</button>
       <p class="msg" :class="{ error: isError }">{{ message }}</p>
     </section>
 
     <section class="panel">
-      <h2>{{ rallyDate }} 出席名册 · {{ uniquePeople }} 人 / {{ roster.length }} 人次</h2>
+      <h2>{{ t("roster", { date: rallyDate, people: uniquePeople, slots: roster.length }) }}</h2>
       <ul v-if="roster.length" class="roster">
         <li v-for="row in roster" :key="row.id">
           <span>{{ row.nickname }}</span>
-          <span>{{ row.profession.name_zh }} · {{ row.role.name_zh }}</span>
-          <button class="ghost" type="button" @click="remove(row)">撤销</button>
+          <span class="notranslate">{{ displayName(row.profession) }} · {{ displayName(row.role) }}</span>
+          <button class="ghost" type="button" @click="remove(row)">{{ t("undo") }}</button>
         </li>
       </ul>
-      <p v-else class="hint">今夜尚无打卡。</p>
+      <p v-else class="hint">{{ t("noCheckin") }}</p>
     </section>
   </div>
 </template>
@@ -77,12 +76,7 @@ import { computed, onMounted, ref, watch } from "vue";
 import { api } from "../api";
 import ProfessionIcon from "../components/ProfessionIcon.vue";
 import { groupProfessions } from "../professions";
-
-function specKindLabel(p) {
-  if (p.spec_kind === "upcoming") return "即将";
-  if (p.spec_kind === "elite") return "特化";
-  return "核心";
-}
+import { displayName, locale, t } from "../i18n";
 
 function today() {
   const d = new Date();
@@ -101,11 +95,18 @@ const roster = ref([]);
 const uniquePeople = computed(() => new Set(roster.value.map((r) => r.nickname)).size);
 const armorGroups = computed(() => {
   const grouped = groupProfessions(professions.value);
-  if (grouped.length) return grouped;
+  const labels = {
+    heavy: t("armorHeavy"),
+    medium: t("armorMedium"),
+    light: t("armorLight"),
+  };
+  if (grouped.length) {
+    return grouped.map((g) => ({ ...g, label: labels[g.armor] || g.label }));
+  }
   return [
     {
       armor: "all",
-      label: "职业",
+      label: t("armorAll"),
       families: [{ key: "all", members: professions.value }],
     },
   ];
@@ -128,7 +129,7 @@ async function submit() {
   message.value = "";
   if (!nickname.value.trim()) {
     isError.value = true;
-    message.value = "请填写公会昵称";
+    message.value = t("needNick");
     return;
   }
   busy.value = true;
@@ -140,7 +141,7 @@ async function submit() {
       role_key: roleKey.value,
       rally_date: rallyDate.value,
     });
-    message.value = "已记入今晚名册（可继续登记其他职业或职责）";
+    message.value = t("savedCheckin");
     await loadRoster();
   } catch (err) {
     isError.value = true;

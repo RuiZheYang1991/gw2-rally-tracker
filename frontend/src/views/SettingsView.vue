@@ -1,31 +1,31 @@
 <template>
   <section class="panel">
-    <h2>每周出勤时间</h2>
-    <p class="hint">勾选通常能出团的晚上，并为每一天指定主要职业 + 职责。团长在「周常总表」里会按坦 / DPS / 辅助汇总。</p>
+    <h2>{{ t("settingsTitle") }}</h2>
+    <p class="hint">{{ t("settingsHint") }}</p>
 
     <label class="field">
-      <span>游戏昵称</span>
-      <input v-model="nickname" maxlength="32" placeholder="与打卡时相同的昵称" />
+      <span>{{ t("gameNick") }}</span>
+      <input v-model="nickname" maxlength="32" :placeholder="t('gameNickPh')" />
     </label>
 
     <div class="week-editor">
       <div v-for="day in days" :key="day.weekday" class="week-row">
         <label class="week-check">
           <input v-model="day.enabled" type="checkbox" />
-          <strong>{{ day.label }}</strong>
+          <strong>{{ weekdayLabel(day.weekday) }}</strong>
         </label>
-        <select v-model="day.profession_key" :disabled="!day.enabled">
+        <select class="notranslate" v-model="day.profession_key" :disabled="!day.enabled">
           <option v-for="p in professionOptions" :key="p.key" :value="p.key">
-            {{ p.name_zh }}
+            {{ displayName(p) }}
           </option>
         </select>
-        <select v-model="day.role_key" :disabled="!day.enabled">
-          <option v-for="r in roles" :key="r.key" :value="r.key">{{ r.name_zh }}</option>
+        <select class="notranslate" v-model="day.role_key" :disabled="!day.enabled">
+          <option v-for="r in roles" :key="r.key" :value="r.key">{{ displayName(r) }}</option>
         </select>
       </div>
     </div>
 
-    <button class="gold-btn" :disabled="busy" @click="save">保存周常空闲</button>
+    <button class="gold-btn" :disabled="busy" @click="save">{{ t("saveWeekly") }}</button>
     <p class="msg" :class="{ error: isError }">{{ message }}</p>
   </section>
 </template>
@@ -33,15 +33,14 @@
 <script setup>
 import { computed, onMounted, ref, watch } from "vue";
 import { api } from "../api";
+import { displayName, t, weekdayLabel } from "../i18n";
 import { sortedProfessions } from "../professions";
 
-const LABELS = ["周一", "周二", "周三", "周四", "周五", "周六", "周日"];
 let loadTimer;
 
 function blankDays() {
-  return LABELS.map((label, weekday) => ({
+  return [0, 1, 2, 3, 4, 5, 6].map((weekday) => ({
     weekday,
-    label,
     enabled: false,
     profession_key: "revenant",
     role_key: "support",
@@ -77,7 +76,7 @@ async function save() {
   const nick = nickname.value.trim();
   if (!nick) {
     isError.value = true;
-    message.value = "请填写游戏昵称";
+    message.value = t("needGameNick");
     return;
   }
   busy.value = true;
@@ -93,7 +92,7 @@ async function save() {
           role_key: d.role_key,
         })),
     });
-    message.value = "周常空闲已更新";
+    message.value = t("weeklySaved");
   } catch (err) {
     isError.value = true;
     message.value = err.message;

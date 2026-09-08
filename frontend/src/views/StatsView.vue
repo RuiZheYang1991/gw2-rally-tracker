@@ -1,18 +1,18 @@
 <template>
   <div>
     <section class="panel">
-      <h2>出勤总览</h2>
-      <p class="hint">饼图与柱状图以职责（坦 / DPS / 辅助）为主分类。点击某一职责可下钻到该职责下的职业构成。</p>
+      <h2>{{ t("statsTitle") }}</h2>
+      <p class="hint">{{ t("statsHint") }}</p>
       <div class="toolbar">
         <label class="field">
-          <span>统计窗口</span>
+          <span>{{ t("statsWindow") }}</span>
           <select v-model.number="days">
-            <option :value="7">近 7 天</option>
-            <option :value="30">近 30 天</option>
+            <option :value="7">{{ t("last7") }}</option>
+            <option :value="30">{{ t("last30") }}</option>
           </select>
         </label>
         <label class="field">
-          <span>按日查看</span>
+          <span>{{ t("byDay") }}</span>
           <input v-model="dayDate" type="date" />
         </label>
       </div>
@@ -20,53 +20,53 @@
 
     <div class="charts" style="margin-top: 16px">
       <section class="panel">
-        <h2>每日总出勤（去重人数）</h2>
+        <h2>{{ t("dailyHeadcount") }}</h2>
         <div class="chart-box">
-          <Gw2Chart v-if="lineData" :key="'line-' + days" type="line" :data="lineData" />
+          <Gw2Chart v-if="lineData" :key="'line-' + days + locale" type="line" :data="lineData" />
         </div>
       </section>
       <section class="panel">
-        <h2>{{ dayDate }} 职责占比</h2>
+        <h2>{{ dayDate }} {{ t("roleShare") }}</h2>
         <div class="chart-box">
-          <Gw2Chart v-if="pieRole" :key="'pie-' + dayDate" type="doughnut" :data="pieRole" @select="onRoleSlice" />
+          <Gw2Chart v-if="pieRole" :key="'pie-' + dayDate + locale" type="doughnut" :data="pieRole" @select="onRoleSlice" />
         </div>
       </section>
       <section class="panel">
-        <h2>{{ dayDate }} 职责人数</h2>
+        <h2>{{ dayDate }} {{ t("roleCount") }}</h2>
         <div class="chart-box">
-          <Gw2Chart v-if="barRole" :key="'bar-' + dayDate" type="bar" :data="barRole" @select="onRoleSlice" />
+          <Gw2Chart v-if="barRole" :key="'bar-' + dayDate + locale" type="bar" :data="barRole" @select="onRoleSlice" />
         </div>
       </section>
       <section class="panel">
         <h2>{{ drillTitle }}</h2>
-        <p v-if="selectedRole" class="hint">点击上方职责图可切换下钻目标。</p>
+        <p v-if="selectedRole" class="hint">{{ t("drillHint") }}</p>
         <div class="chart-box">
-          <Gw2Chart v-if="pieDrill" :key="'drill-' + dayDate + '-' + selectedRole" type="doughnut" :data="pieDrill" />
+          <Gw2Chart v-if="pieDrill" :key="'drill-' + dayDate + '-' + selectedRole + locale" type="doughnut" :data="pieDrill" />
         </div>
       </section>
     </div>
 
     <section class="panel" style="margin-top: 16px">
-      <h2>{{ dayDate }} 明细 · {{ day.total || 0 }} 人 / {{ day.slots || 0 }} 人次</h2>
+      <h2>{{ t("detail", { date: dayDate, people: day.total || 0, slots: day.slots || 0 }) }}</h2>
       <ul v-if="day.checkins?.length" class="roster">
         <li v-for="row in day.checkins" :key="row.id">
           <span>{{ row.nickname }}</span>
-          <span>{{ row.role.name_zh }} · {{ row.profession.name_zh }}</span>
+          <span class="notranslate">{{ displayName(row.role) }} · {{ displayName(row.profession) }}</span>
           <span></span>
         </li>
       </ul>
-      <p v-else class="hint">该日没有打卡记录。</p>
+      <p v-else class="hint">{{ t("noDay") }}</p>
     </section>
 
     <section class="panel" style="margin-top: 16px">
-      <h2>窗口内职责人次</h2>
+      <h2>{{ t("matrixTitle") }}</h2>
       <div class="table-wrap">
         <table>
           <thead>
             <tr>
-              <th>日期</th>
-              <th v-for="r in roles" :key="r.key">{{ r.name_zh }}</th>
-              <th>人数</th>
+              <th>{{ t("date") }}</th>
+              <th v-for="r in roles" :key="r.key" class="notranslate">{{ displayName(r) }}</th>
+              <th>{{ t("people") }}</th>
             </tr>
           </thead>
           <tbody>
@@ -86,6 +86,7 @@
 import { computed, onMounted, ref, watch } from "vue";
 import { api } from "../api";
 import Gw2Chart from "../components/Gw2Chart.vue";
+import { displayName, locale, t } from "../i18n";
 
 function today() {
   const d = new Date();
@@ -104,7 +105,17 @@ const dayDate = ref(today());
 const overview = ref(null);
 const day = ref({ total: 0, slots: 0, checkins: [], by_role: [], by_role_detail: [] });
 const roles = ref([]);
+const professions = ref([]);
 const selectedRole = ref("support");
+
+function matchRole(item) {
+  return roles.value.find((r) => r.key === item.key) || item;
+}
+
+function matchProf(item) {
+  const key = item.profession_key || item.key;
+  return professions.value.find((p) => p.key === key) || item;
+}
 
 const lineData = computed(() => {
   if (!overview.value) return null;
@@ -114,7 +125,7 @@ const lineData = computed(() => {
     labels,
     datasets: [
       {
-        label: "出勤人数",
+        label: t("chartHeadcount"),
         data: values,
         borderColor: "#e8c36a",
         backgroundColor: "rgba(232,195,106,.18)",
@@ -131,8 +142,9 @@ const roleItems = computed(() => day.value.by_role || []);
 const pieRole = computed(() => {
   const items = roleItems.value;
   if (!items.length) return null;
+  locale.value;
   return {
-    labels: items.map((x) => x.name_zh),
+    labels: items.map((x) => displayName(matchRole(x))),
     datasets: [
       {
         data: items.map((x) => x.count),
@@ -146,11 +158,12 @@ const pieRole = computed(() => {
 const barRole = computed(() => {
   const items = roleItems.value;
   if (!items.length) return null;
+  locale.value;
   return {
-    labels: items.map((x) => x.name_zh),
+    labels: items.map((x) => displayName(matchRole(x))),
     datasets: [
       {
-        label: "人次",
+        label: t("chartSlots"),
         data: items.map((x) => x.count),
         backgroundColor: items.map((x) => x.color),
       },
@@ -164,22 +177,23 @@ const drillBlock = computed(() => {
 });
 
 const drillTitle = computed(() => {
-  if (!drillBlock.value) return "职责下钻";
-  return `${drillBlock.value.name_zh} · 职业构成`;
+  if (!drillBlock.value) return t("drillFallback");
+  return `${displayName(matchRole(drillBlock.value))} · ${t("composition")}`;
 });
 
 const pieDrill = computed(() => {
+  locale.value;
   const block = drillBlock.value;
   if (!block) return null;
   const items = block.professions || [];
   if (!items.length) {
     return {
-      labels: ["空缺"],
+      labels: [t("vacant")],
       datasets: [{ data: [1], backgroundColor: ["#3a2a2a"], borderColor: "#121528" }],
     };
   }
   return {
-    labels: items.map((x) => `${x.name_zh} ×${x.count}`),
+    labels: items.map((x) => `${displayName(matchProf(x))} ×${x.count}`),
     datasets: [
       {
         data: items.map((x) => x.count),
@@ -221,6 +235,7 @@ async function loadDay() {
 
 onMounted(async () => {
   roles.value = await api.roles();
+  professions.value = await api.professions();
   await loadOverview();
   await loadDay();
 });
