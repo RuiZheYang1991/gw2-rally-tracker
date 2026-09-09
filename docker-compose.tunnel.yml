@@ -1,0 +1,15 @@
+version: "2.4"
+
+# Cloudflare Tunnel：不占用主机 80/443，证书由 Cloudflare 自动续期。
+# 1. 注册 Cloudflare，Zero Trust → Networks → Tunnels → 建立 tunnel
+# 2. Public hostname 指到 http://frontend:80
+# 3. .env 写入 CLOUDFLARE_TUNNEL_TOKEN
+#    docker-compose -f docker-compose.yml -f docker-compose.tunnel.yml up -d
+
+services:
+  cloudflared:
+    image: cloudflare/cloudflared:latest
+    restart: unless-stopped
+    command: tunnel --no-autoupdate run --token ${CLOUDFLARE_TUNNEL_TOKEN}
+    depends_on:
+      - frontend

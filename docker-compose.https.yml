@@ -1,0 +1,30 @@
+version: "2.4"
+
+# 公网 HTTPS（Let's Encrypt 自动申请与续期）
+# 用法：复制 .env.example 为 .env 后
+#   docker-compose -f docker-compose.yml -f docker-compose.https.yml up -d
+#
+# 需要：域名 A 记录指向这台机器公网 IP，并放行 80/443。
+# 本仓库虚拟机若 80 已被其它 nginx 占用，请改用 docker-compose.tunnel.yml。
+
+services:
+  caddy:
+    image: caddy:2.8-alpine
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"
+    environment:
+      DOMAIN: ${DOMAIN}
+      ACME_EMAIL: ${ACME_EMAIL}
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      - frontend
+
+volumes:
+  caddy_data:
+  caddy_config:

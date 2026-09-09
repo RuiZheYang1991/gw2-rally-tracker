@@ -1,0 +1,14 @@
+version: "2.4"
+
+# 可选：DuckDNS 动态更新 A 记录
+#   docker-compose -f docker-compose.yml -f docker-compose.https.yml -f docker-compose.duckdns.yml up -d
+
+services:
+  duckdns:
+    image: lscr.io/linuxserver/duckdns:latest
+    restart: unless-stopped
+    environment:
+      SUBDOMAINS: ${DUCKDNS_SUBDOMAIN}
+      TOKEN: ${DUCKDNS_TOKEN}
+      UPDATE_IP: ipv4
+      TZ: Asia/Taipei

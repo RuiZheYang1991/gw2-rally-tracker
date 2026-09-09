@@ -142,4 +142,42 @@ backend/          FastAPI
 frontend/          Vue 3
 data/              SQLite 挂载目录
 docker-compose.yml
+docker-compose.https.yml   Caddy + Let's Encrypt
+docker-compose.tunnel.yml  Cloudflare Tunnel
 ```
+
+## 公网 HTTPS（免费证书自动续期）
+
+我无法替你注册域名账号；证书也不应放进仓库。下面两套都是免费证书、自动续期，选一条即可。
+
+### 方案 A：DuckDNS 免费域名 + Caddy（适合新云主机，80/443 空闲）
+
+1. 打开 [https://www.duckdns.org](https://www.duckdns.org)，用 Google/GitHub 登录，建子域名（本仓库示例为 `gw2rally.duckdns.org`），A 记录填云主机公网 IP。token 只写进服务器上的 `.env`，不要提交 git。
+2. 安全组 / 防火墙放行 **80、443**。
+3. 在项目目录：
+
+```bash
+cp .env.example .env
+# 编辑 .env：填入 DUCKDNS_TOKEN（其余示例已按 gw2rally 填好）
+docker-compose -f docker-compose.yml -f docker-compose.https.yml -f docker-compose.duckdns.yml up -d
+```
+
+Caddy 会向 Let's Encrypt 申请证书并自动续期，浏览器访问 `https://gw2rally.duckdns.org`。
+
+若这台机器 **80 已被其它容器占用**，不要用方案 A，改用方案 B，或把旧站也交给同一层反代、按域名分流。
+
+### 方案 B：Cloudflare Tunnel（适合 80 已被占用的现有虚拟机）
+
+不占用主机 80/443，HTTPS 由 Cloudflare 签发并自动续期。
+
+1. 注册 [Cloudflare](https://dash.cloudflare.com/)（免费）。稳定自定义域名仍需自己有一个域名（可把便宜域名接入 Cloudflare DNS）；没有域名时，控制台里的 **Quick Tunnel** 地址会变，只适合临时测试。
+2. Zero Trust → Networks → Tunnels → Create → Docker，复制 token。
+3. 为该 Tunnel 添加 Public Hostname，指向 `http://frontend:80`。
+4. `.env` 填 `CLOUDFLARE_TUNNEL_TOKEN` 后：
+
+```bash
+docker-compose -f docker-compose.yml -f docker-compose.tunnel.yml up -d
+```
+
+团员用 Cloudflare 给你的 `https://…` 访问即可。
+
