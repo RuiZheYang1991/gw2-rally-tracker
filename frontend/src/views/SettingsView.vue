@@ -14,14 +14,12 @@
           <input v-model="day.enabled" type="checkbox" />
           <strong>{{ weekdayLabel(day.weekday) }}</strong>
         </label>
-        <select class="notranslate" v-model="day.profession_key" :disabled="!day.enabled">
-          <option v-for="p in professionOptions" :key="p.key" :value="p.key">
-            {{ displayName(p) }}
-          </option>
-        </select>
-        <select class="notranslate" v-model="day.role_key" :disabled="!day.enabled">
-          <option v-for="r in roles" :key="r.key" :value="r.key">{{ displayName(r) }}</option>
-        </select>
+        <ProfessionSelect
+          v-model="day.profession_key"
+          :options="professionOptions"
+          :disabled="!day.enabled"
+        />
+        <RoleSelect v-model="day.role_key" :options="roles" :disabled="!day.enabled" />
       </div>
     </div>
 
@@ -33,7 +31,9 @@
 <script setup>
 import { computed, onMounted, ref, watch } from "vue";
 import { api } from "../api";
-import { displayName, t, weekdayLabel } from "../i18n";
+import ProfessionSelect from "../components/ProfessionSelect.vue";
+import RoleSelect from "../components/RoleSelect.vue";
+import { t, weekdayLabel } from "../i18n";
 import { sortedProfessions } from "../professions";
 
 let loadTimer;

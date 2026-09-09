@@ -11,7 +11,7 @@ const FAMILIES = {
   revenant: ["revenant", "herald", "renegade", "vindicator", "conduit"],
   engineer: ["engineer", "scrapper", "holosmith", "mechanist", "amalgam"],
   ranger: ["ranger", "druid", "soulbeast", "untamed", "galeshot"],
-  thief: ["thief", "daredevil", "deadeye", "specter"],
+  thief: ["thief", "daredevil", "deadeye", "specter", "antiquary"],
   elementalist: ["elementalist", "tempest", "weaver", "catalyst", "evoker"],
   mesmer: ["mesmer", "chronomancer", "mirage", "virtuoso", "troubadour"],
   necromancer: ["necromancer", "reaper", "scourge", "harbinger", "ritualist"],
@@ -70,4 +70,13 @@ export function sortedProfessions(list) {
   return list.slice().sort((a, b) => (a.sort_order || 0) - (b.sort_order || 0));
 }
 
-export { familyOf, armorOf };
+export function isCoreProfession(p) {
+  if (!p) return false;
+  if (p.spec_kind === "core") return true;
+  return Boolean(p.family_key && p.key === p.family_key);
+}
+
+/** 核心职业图标比特化大约 30%。 */
+export function professionIconSize(p, specSize = 48) {
+  return isCoreProfession(p) ? Math.round(specSize * 1.3) : specSize;
+}

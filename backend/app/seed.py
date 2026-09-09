@@ -57,6 +57,7 @@ PROFESSIONS = [
     _p("daredevil", "獨行俠", "Daredevil", "thief", "medium", "elite", "#A07088", 221),
     _p("deadeye", "神槍手", "Deadeye", "thief", "medium", "elite", "#D4A0B4", 222),
     _p("specter", "縛影師", "Specter", "thief", "medium", "elite", "#8A5A78", 223),
+    _p("antiquary", "彩戲師", "Antiquary", "thief", "medium", "upcoming", "#E8B8D0", 224),
     # 輕甲 · 學者
     _p("elementalist", "元素使", "Elementalist", "elementalist", "light", "core", EL, 300),
     _p("tempest", "風暴使", "Tempest", "elementalist", "light", "elite", "#E07070", 301),

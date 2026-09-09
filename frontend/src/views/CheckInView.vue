@@ -21,13 +21,47 @@
           :class="{ active: roleKey === r.key }"
           @click="roleKey = r.key"
         >
-          <strong>{{ displayName(r) }}</strong>
-          <em v-if="locale === 'zh'">{{ r.name_en }}</em>
+          <span class="role-icon-slot">
+            <img
+              class="role-icon"
+              :class="'role-icon--' + r.key"
+              :src="roleIcon(r.key)"
+              :alt="r.name_en"
+              :width="r.key === 'support' ? 45 : r.key === 'dps' ? 31 : 36"
+              :height="r.key === 'support' ? 45 : r.key === 'dps' ? 31 : 36"
+            />
+          </span>
+          <span class="role-copy">
+            <strong>{{ displayName(r) }}</strong>
+            <em v-if="locale === 'zh'">{{ r.name_en }}</em>
+          </span>
         </button>
       </div>
 
       <div class="armor-list">
-        <section v-for="group in armorGroups" :key="group.armor" class="armor-block">
+        <div class="armor-tabs" role="tablist">
+          <button
+            v-for="group in armorGroups"
+            :key="'tab-' + group.armor"
+            type="button"
+            class="armor-tab"
+            role="tab"
+            :class="{
+              active: armorTab === group.armor,
+              current: professionArmor === group.armor,
+            }"
+            :aria-selected="armorTab === group.armor"
+            @click="armorTab = group.armor"
+          >
+            {{ group.label }}
+          </button>
+        </div>
+        <section
+          v-for="group in armorGroups"
+          :key="group.armor"
+          class="armor-block"
+          :class="{ 'is-collapsed': armorTab !== group.armor }"
+        >
           <h3>{{ group.label }}</h3>
           <div v-for="family in group.families" :key="family.key" class="grid-prof">
             <button
@@ -39,12 +73,13 @@
                 active: professionKey === p.key,
                 upcoming: p.spec_kind === 'upcoming',
               }"
-              @click="professionKey = p.key"
+              @click="pickProfession(p)"
             >
               <ProfessionIcon
                 :profession-key="p.key"
                 :family-key="p.family_key"
                 :color="p.color"
+                :size="professionIconSize(p, 48)"
               />
               <strong class="notranslate">{{ displayName(p) }}</strong>
             </button>
@@ -74,8 +109,9 @@
 import { computed, onMounted, ref, watch } from "vue";
 import { api } from "../api";
 import ProfessionIcon from "../components/ProfessionIcon.vue";
-import { groupProfessions } from "../professions";
+import { groupProfessions, professionIconSize } from "../professions";
 import { displayName, locale, t } from "../i18n";
+import { roleIcon } from "../roleIcons";
 
 function today() {
   const d = new Date();
@@ -109,6 +145,20 @@ const armorGroups = computed(() => {
       families: [{ key: "all", members: professions.value }],
     },
   ];
+});
+const armorTab = ref("light");
+const professionArmor = computed(() => {
+  const p = professions.value.find((x) => x.key === professionKey.value);
+  return p?.armor || "";
+});
+
+function pickProfession(p) {
+  professionKey.value = p.key;
+  if (p.armor) armorTab.value = p.armor;
+}
+
+watch(professionArmor, (armor) => {
+  if (armor) armorTab.value = armor;
 });
 const busy = ref(false);
 const message = ref("");

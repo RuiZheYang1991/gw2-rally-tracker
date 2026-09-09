@@ -8,7 +8,10 @@
       <div class="brand">
         <small>Guild Wars 2 · Rally Ledger</small>
         <h1>{{ t("brand") }}</h1>
-        <p v-if="guildName" class="guild-chip notranslate">{{ guildName }}</p>
+        <p v-if="guildName" class="guild-chip">
+          <span class="guild-chip-label">{{ t("currentGuild") }}</span>
+          <strong class="guild-chip-name notranslate">{{ guildName }}</strong>
+        </p>
       </div>
       <div class="topbar-right">
         <nav v-if="!route.meta.public" class="nav">

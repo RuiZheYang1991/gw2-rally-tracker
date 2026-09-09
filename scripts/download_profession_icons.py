@@ -12,7 +12,7 @@ UA = "gw2-rally-tracker/1.0 (https://github.com/RuiZheYang1991/gw2-rally-tracker
 API = "https://wiki.guildwars2.com/api.php"
 OUT = Path(__file__).resolve().parents[1] / "frontend" / "public" / "img" / "professions"
 
-# 与 seed.py 的 key 对齐；Antiquary 为 Wiki 页有、本工具尚未启用的特化
+# 与 seed.py 的 key 对齐
 PROFESSIONS = [
     ("warrior", "Warrior"),
     ("berserker", "Berserker"),

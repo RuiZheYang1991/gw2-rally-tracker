@@ -5,9 +5,10 @@
       class="prof-img"
       :src="src"
       :alt="professionKey"
+      :style="sizeStyle"
       @error="failed = true"
     />
-    <span v-else v-html="mark"></span>
+    <span v-else class="prof-mark" :style="sizeStyle" v-html="mark"></span>
   </span>
 </template>
 
@@ -19,6 +20,7 @@ const props = defineProps({
   professionKey: { type: String, required: true },
   color: { type: String, default: "#e8c36a" },
   familyKey: { type: String, default: "" },
+  size: { type: Number, default: 48 },
 });
 
 const failed = ref(false);
@@ -26,6 +28,10 @@ const src = computed(() => `/img/professions/${props.professionKey}.png`);
 const mark = computed(() =>
   professionMark(props.professionKey, props.color, props.familyKey)
 );
+const sizeStyle = computed(() => ({
+  width: `${props.size}px`,
+  height: `${props.size}px`,
+}));
 
 watch(
   () => props.professionKey,
@@ -36,10 +42,18 @@ watch(
 </script>
 
 <style scoped>
-.prof-img {
-  width: 48px;
-  height: 48px;
+.prof-img,
+.prof-mark :deep(svg) {
   object-fit: contain;
   display: block;
+}
+
+.prof-mark {
+  display: inline-flex;
+}
+
+.prof-mark :deep(svg) {
+  width: 100%;
+  height: 100%;
 }
 </style>
