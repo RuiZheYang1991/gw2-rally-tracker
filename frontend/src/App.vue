@@ -1,16 +1,16 @@
 <template>
   <div class="shell" :class="{ 'shell-wide': route.meta.wide, 'shell-login': route.meta.public }">
     <header class="topbar">
+      <div class="lang-switch" role="group" :aria-label="t('title')">
+        <button type="button" :class="{ active: locale === 'zh' }" @click="setLocale('zh')">中</button>
+        <button type="button" :class="{ active: locale === 'en' }" @click="setLocale('en')">EN</button>
+      </div>
       <div class="brand">
         <small>Guild Wars 2 · Rally Ledger</small>
         <h1>{{ t("brand") }}</h1>
         <p v-if="guildName" class="guild-chip notranslate">{{ guildName }}</p>
       </div>
       <div class="topbar-right">
-        <div class="lang-switch" role="group" :aria-label="t('title')">
-          <button type="button" :class="{ active: locale === 'zh' }" @click="setLocale('zh')">中</button>
-          <button type="button" :class="{ active: locale === 'en' }" @click="setLocale('en')">EN</button>
-        </div>
         <nav v-if="!route.meta.public" class="nav">
           <button
             v-for="item in navItems"

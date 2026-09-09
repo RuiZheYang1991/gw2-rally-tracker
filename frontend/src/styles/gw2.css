@@ -56,6 +56,7 @@ select {
 }
 
 .topbar {
+  position: relative;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -120,8 +121,14 @@ select {
 }
 
 .lang-switch {
+  position: absolute;
+  top: 4px;
+  right: 6px;
+  z-index: 1;
   display: flex;
   border: 1px solid var(--gold-dim);
+  transform: scale(0.5);
+  transform-origin: top right;
 }
 
 .lang-switch button {

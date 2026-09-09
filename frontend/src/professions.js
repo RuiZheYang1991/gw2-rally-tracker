@@ -1,7 +1,7 @@
 export const ARMOR_GROUPS = [
-  { armor: "heavy", label: "重甲 · 士兵" },
-  { armor: "medium", label: "中甲 · 冒险家" },
-  { armor: "light", label: "轻甲 · 学者" },
+  { armor: "heavy", label: "重甲" },
+  { armor: "medium", label: "中甲" },
+  { armor: "light", label: "轻甲" },
 ];
 
 /** 核心职业 key → 其下全部独立职业（含特化）。不依赖后端是否回传 family_key。 */
