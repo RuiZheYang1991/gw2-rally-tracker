@@ -92,6 +92,26 @@ select {
   text-shadow: 0 0 12px rgba(232, 195, 106, 0.25);
 }
 
+.guild-chip {
+  margin: 4px 0 0;
+  color: var(--muted);
+  font-size: 12px;
+  letter-spacing: 0.08em;
+}
+
+.shell-login {
+  max-width: 520px;
+}
+
+.login-panel {
+  margin-top: 8px;
+}
+
+.nav-logout {
+  margin-left: 4px;
+  color: var(--danger) !important;
+}
+
 .topbar-right {
   display: flex;
   flex-wrap: wrap;

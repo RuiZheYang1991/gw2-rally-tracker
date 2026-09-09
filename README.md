@@ -38,39 +38,26 @@ docker-compose up -d
 docker compose up -d
 ```
 
-浏览器打开 [http://localhost:8080](http://localhost:8080)。
+浏览器打开 [http://localhost:8080](http://localhost:8080)。第一次打开会进入登录页：填写**公会名称 + 密码**。该名称尚未存在时，这次进入就会创建公会并设置密码；之后团员用同一组信息即可打卡。各公会的打卡数据互相隔离。
 
 SQLite 挂载在宿主机 `./data/rally.db`，容器重启不会丢数据。
 
-### 虚拟机上经常改代码：pull 后一并更新镜像
+### 虚拟机上更新代码和数据库
 
-`git pull` **不会**自动重建 Docker 镜像。以后在虚拟机里用这一条即可（拉代码 + 按变更重建前后端镜像 + 重启）：
+`git pull` **不会**自动重建 Docker 镜像。后端容器**每次启动**都会跑 `migrate_schema()`，给旧的 `rally.db` 加表、加字段（本版本会加上 `guilds` / `guild_sessions`，以及打卡表上的 `guild_id`）。**不需要**手工执行 SQL。
+
+在虚拟机项目目录：
 
 ```bash
 chmod +x update.sh   # 只需第一次
 ./update.sh
 ```
 
-或：
+或 `make update`。等价于 `git pull` + `docker-compose up -d --build`。
 
-```bash
-make update
-```
+启动成功后，旧库里已有的打卡会归到公会 **「原有数据」**。用这个名称进入时，第一次填写的密码即成为该公会密码。
 
-等价于手动执行：
-
-```bash
-git pull
-docker-compose up -d --build
-```
-
-`--build` 会在源码变化时重建镜像；未改过的层仍走缓存，一般比 `--no-cache` 快。若前端样式还是旧的，再跑一次清缓存构建：
-
-```bash
-./update.sh --no-cache
-```
-
-然后在浏览器 **Ctrl+F5** 强刷，避免用到旧的打包 CSS。
+若前端仍是旧页面，再跑 `./update.sh --no-cache`，浏览器 **Ctrl+F5**。
 
 常见问题：
 
@@ -110,22 +97,25 @@ npm run dev
 
 ## 数据模型
 
-启动时 `migrate_schema()` 会自动给旧库加字段、迁移职责（原 `heal` 并入辅助）、重建打卡唯一约束。
+启动时 `migrate_schema()` 会自动给旧库加字段、迁移职责（原 `heal` 并入辅助）、重建打卡唯一约束，并在 schema 4 增加公会登录表。
 
 | 表 | 作用 |
 | --- | --- |
+| `guilds` | 公会。`name_norm` 唯一；`password_hash` 为空表示尚未设密（首次进入时写入） |
+| `guild_sessions` | 登录令牌 |
 | `professions` | 核心 + 特化。`armor` / `family_key` / `spec_kind`（core / elite / upcoming） |
 | `roles` | 坦 / DPS / 辅助（`tank` / `dps` / `support`） |
-| `checkins` | 每日打卡。`duty`：`Tank` / `DPS` / `Support`。唯一约束为昵称 + 日期 + 职业 + 职责 |
-| `weekly_slots` | 周常空闲：昵称 + 星期（0=周一 … 6=周日）+ 职业 + 职责 |
+| `checkins` | 每日打卡（按 `guild_id` 隔离）。唯一约束为公会 + 昵称 + 日期 + 职业 + 职责 |
+| `weekly_slots` | 周常空闲（按 `guild_id` 隔离） |
 
 人数由打卡记录聚合，不单独存「人数」字段。
 
 ## API
 
 - `GET /api/health`
+- `POST /api/auth/login`　`GET /api/auth/me`　`POST /api/auth/password`　`POST /api/auth/logout`
 - `GET /api/professions`　`GET /api/roles`
-- `POST /api/checkins` 新增一条职业+职责（相同组合幂等）
+- `POST /api/checkins` 新增一条职业+职责（相同组合幂等；需登录）
 - `GET /api/checkins?rally_date=YYYY-MM-DD`
 - `DELETE /api/checkins/{id}`
 - `GET /api/stats/overview?days=7\|30`

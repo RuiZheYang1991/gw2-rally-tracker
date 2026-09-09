@@ -2,7 +2,6 @@
   <div class="layout">
     <section class="panel">
       <h2>{{ t("checkinTitle") }}</h2>
-      <p class="hint">{{ t("checkinHint") }}</p>
 
       <label class="field">
         <span>{{ t("nickname") }}</span>

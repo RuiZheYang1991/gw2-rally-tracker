@@ -6,15 +6,31 @@ from collections import defaultdict
 from contextlib import asynccontextmanager
 from datetime import date, timedelta
 
-from fastapi import Depends, FastAPI, HTTPException, Query
+from fastapi import Depends, FastAPI, Header, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy import func
 from sqlalchemy.orm import Session, joinedload
 
+from .auth import (
+    MAX_GUILD_NAME,
+    MIN_PASSWORD,
+    ensure_owner_token,
+    get_current_guild,
+    get_current_session,
+    hash_password,
+    issue_session,
+    normalize_guild_name,
+    owner_token_matches,
+    parse_bearer,
+    verify_password,
+)
 from .database import Base, engine, get_db
 from .migrate import migrate_schema
-from .models import CheckIn, Profession, Role, WeeklySlot
+from .models import CheckIn, Guild, GuildSession, Profession, Role, WeeklySlot
 from .schemas import (
+    AuthLogin,
+    AuthOut,
+    PasswordChange,
     CheckInCreate,
     CheckInOut,
     CountItem,
@@ -154,6 +170,108 @@ def health():
     return {"status": "ok"}
 
 
+@app.post("/api/auth/login", response_model=AuthOut)
+def login(payload: AuthLogin, db: Session = Depends(get_db)):
+    name = normalize_guild_name(payload.guild_name)
+    password = (payload.password or "").strip()
+    if not name:
+        raise HTTPException(status_code=400, detail="请填写公会名称")
+    if len(name) > MAX_GUILD_NAME:
+        raise HTTPException(status_code=400, detail="公会名称过长")
+    if len(password) < MIN_PASSWORD:
+        raise HTTPException(status_code=400, detail="密码至少 4 位")
+
+    name_norm = name.casefold()
+    guild = db.query(Guild).filter(Guild.name_norm == name_norm).first()
+    created = False
+    if guild is None:
+        guild = Guild(name=name, name_norm=name_norm, password_hash=hash_password(password))
+        db.add(guild)
+        db.commit()
+        db.refresh(guild)
+        created = True
+    elif not guild.password_hash:
+        guild.password_hash = hash_password(password)
+        db.commit()
+        created = True
+    elif not verify_password(password, guild.password_hash):
+        raise HTTPException(status_code=401, detail="公会名称或密码不对")
+
+    is_owner = created or owner_token_matches(guild, payload.owner_token)
+    if created:
+        ensure_owner_token(guild)
+        db.commit()
+    token = issue_session(db, guild, is_owner=is_owner)
+    return AuthOut(
+        token=token,
+        guild_name=guild.name,
+        created=created,
+        is_owner=is_owner,
+        owner_token=guild.owner_token if is_owner else "",
+    )
+
+
+@app.get("/api/auth/me", response_model=AuthOut)
+def auth_me(
+    db: Session = Depends(get_db),
+    session: GuildSession = Depends(get_current_session),
+    guild: Guild = Depends(get_current_guild),
+):
+    claimed = False
+    if not (guild.owner_token or "").strip():
+        ensure_owner_token(guild)
+        session.is_owner = True
+        db.commit()
+        claimed = True
+    is_owner = bool(session.is_owner) or claimed
+    return AuthOut(
+        guild_name=guild.name,
+        created=False,
+        is_owner=is_owner,
+        owner_token=guild.owner_token if is_owner else "",
+    )
+
+
+@app.post("/api/auth/password")
+def change_password(
+    payload: PasswordChange,
+    authorization: str | None = Header(default=None),
+    db: Session = Depends(get_db),
+    session: GuildSession = Depends(get_current_session),
+    guild: Guild = Depends(get_current_guild),
+):
+    if not session.is_owner:
+        raise HTTPException(status_code=403, detail="只有公会创建者可以改密码")
+    current = (payload.current_password or "").strip()
+    new = (payload.new_password or "").strip()
+    if len(new) < MIN_PASSWORD:
+        raise HTTPException(status_code=400, detail="新密码至少 4 位")
+    if current == new:
+        raise HTTPException(status_code=400, detail="新密码不能与当前密码相同")
+    if not verify_password(current, guild.password_hash):
+        raise HTTPException(status_code=400, detail="当前密码不对")
+    guild.password_hash = hash_password(new)
+    keep = parse_bearer(authorization)
+    q = db.query(GuildSession).filter(GuildSession.guild_id == guild.id)
+    if keep:
+        q = q.filter(GuildSession.token != keep)
+    q.delete(synchronize_session=False)
+    db.commit()
+    return {"ok": True}
+
+
+@app.post("/api/auth/logout")
+def logout(
+    authorization: str | None = Header(default=None),
+    db: Session = Depends(get_db),
+):
+    token = parse_bearer(authorization)
+    if token:
+        db.query(GuildSession).filter(GuildSession.token == token).delete()
+        db.commit()
+    return {"ok": True}
+
+
 @app.get("/api/professions", response_model=list[ProfessionOut])
 def list_professions(db: Session = Depends(get_db)):
     return db.query(Profession).order_by(Profession.sort_order).all()
@@ -165,7 +283,11 @@ def list_roles(db: Session = Depends(get_db)):
 
 
 @app.post("/api/checkins", response_model=CheckInOut)
-def upsert_checkin(payload: CheckInCreate, db: Session = Depends(get_db)):
+def upsert_checkin(
+    payload: CheckInCreate,
+    db: Session = Depends(get_db),
+    guild: Guild = Depends(get_current_guild),
+):
     nickname = payload.nickname.strip()
     if not nickname:
         raise HTTPException(status_code=400, detail="昵称不能为空")
@@ -177,6 +299,7 @@ def upsert_checkin(payload: CheckInCreate, db: Session = Depends(get_db)):
         db.query(CheckIn)
         .options(joinedload(CheckIn.profession), joinedload(CheckIn.role))
         .filter(
+            CheckIn.guild_id == guild.id,
             CheckIn.nickname == nickname,
             CheckIn.rally_date == rally_date,
             CheckIn.profession_id == profession.id,
@@ -191,6 +314,7 @@ def upsert_checkin(payload: CheckInCreate, db: Session = Depends(get_db)):
         return serialize_checkin(existing)
 
     row = CheckIn(
+        guild_id=guild.id,
         nickname=nickname,
         rally_date=rally_date,
         profession_id=profession.id,
@@ -212,8 +336,13 @@ def upsert_checkin(payload: CheckInCreate, db: Session = Depends(get_db)):
 def list_checkins(
     rally_date: date | None = Query(default=None),
     db: Session = Depends(get_db),
+    guild: Guild = Depends(get_current_guild),
 ):
-    query = db.query(CheckIn).options(joinedload(CheckIn.profession), joinedload(CheckIn.role))
+    query = (
+        db.query(CheckIn)
+        .options(joinedload(CheckIn.profession), joinedload(CheckIn.role))
+        .filter(CheckIn.guild_id == guild.id)
+    )
     if rally_date:
         query = query.filter(CheckIn.rally_date == rally_date)
     rows = query.order_by(CheckIn.created_at.asc()).all()
@@ -221,8 +350,16 @@ def list_checkins(
 
 
 @app.delete("/api/checkins/{checkin_id}")
-def delete_checkin(checkin_id: int, db: Session = Depends(get_db)):
-    row = db.query(CheckIn).filter(CheckIn.id == checkin_id).first()
+def delete_checkin(
+    checkin_id: int,
+    db: Session = Depends(get_db),
+    guild: Guild = Depends(get_current_guild),
+):
+    row = (
+        db.query(CheckIn)
+        .filter(CheckIn.id == checkin_id, CheckIn.guild_id == guild.id)
+        .first()
+    )
     if not row:
         raise HTTPException(status_code=404, detail="记录不存在")
     db.delete(row)
@@ -235,18 +372,20 @@ def overview(
     days: int = Query(default=7, ge=1, le=90),
     end: date | None = Query(default=None),
     db: Session = Depends(get_db),
+    guild: Guild = Depends(get_current_guild),
 ):
     start_date, end_date = date_window(days, end)
+    guild_scope = CheckIn.guild_id == guild.id
 
     daily_people = (
         db.query(CheckIn.rally_date, func.count(func.distinct(CheckIn.nickname)))
-        .filter(CheckIn.rally_date >= start_date, CheckIn.rally_date <= end_date)
+        .filter(guild_scope, CheckIn.rally_date >= start_date, CheckIn.rally_date <= end_date)
         .group_by(CheckIn.rally_date)
         .all()
     )
     daily_slots = (
         db.query(CheckIn.rally_date, func.count(CheckIn.id))
-        .filter(CheckIn.rally_date >= start_date, CheckIn.rally_date <= end_date)
+        .filter(guild_scope, CheckIn.rally_date >= start_date, CheckIn.rally_date <= end_date)
         .group_by(CheckIn.rally_date)
         .all()
     )
@@ -269,6 +408,7 @@ def overview(
         .outerjoin(
             CheckIn,
             (CheckIn.profession_id == Profession.id)
+            & (CheckIn.guild_id == guild.id)
             & (CheckIn.rally_date >= start_date)
             & (CheckIn.rally_date <= end_date),
         )
@@ -285,6 +425,7 @@ def overview(
         .outerjoin(
             CheckIn,
             (CheckIn.role_id == Role.id)
+            & (CheckIn.guild_id == guild.id)
             & (CheckIn.rally_date >= start_date)
             & (CheckIn.rally_date <= end_date),
         )
@@ -300,7 +441,7 @@ def overview(
     day_prof_rows = (
         db.query(CheckIn.rally_date, Profession, func.count(CheckIn.id))
         .join(Profession, CheckIn.profession_id == Profession.id)
-        .filter(CheckIn.rally_date >= start_date, CheckIn.rally_date <= end_date)
+        .filter(CheckIn.guild_id == guild.id, CheckIn.rally_date >= start_date, CheckIn.rally_date <= end_date)
         .group_by(CheckIn.rally_date, Profession.id)
         .order_by(CheckIn.rally_date, Profession.sort_order)
         .all()
@@ -319,7 +460,7 @@ def overview(
     day_role_rows = (
         db.query(CheckIn.rally_date, Role, func.count(CheckIn.id))
         .join(Role, CheckIn.role_id == Role.id)
-        .filter(CheckIn.rally_date >= start_date, CheckIn.rally_date <= end_date)
+        .filter(CheckIn.guild_id == guild.id, CheckIn.rally_date >= start_date, CheckIn.rally_date <= end_date)
         .group_by(CheckIn.rally_date, Role.id)
         .order_by(CheckIn.rally_date, Role.sort_order)
         .all()
@@ -349,11 +490,15 @@ def overview(
 
 
 @app.get("/api/stats/day", response_model=DayStats)
-def day_stats(rally_date: date = Query(...), db: Session = Depends(get_db)):
+def day_stats(
+    rally_date: date = Query(...),
+    db: Session = Depends(get_db),
+    guild: Guild = Depends(get_current_guild),
+):
     rows = (
         db.query(CheckIn)
         .options(joinedload(CheckIn.profession), joinedload(CheckIn.role))
-        .filter(CheckIn.rally_date == rally_date)
+        .filter(CheckIn.guild_id == guild.id, CheckIn.rally_date == rally_date)
         .order_by(CheckIn.created_at.asc())
         .all()
     )
@@ -394,12 +539,16 @@ def serialize_slot(row: WeeklySlot) -> WeeklySlotOut:
 
 
 @app.get("/api/weekly", response_model=WeeklyMemberOut)
-def get_weekly(nickname: str = Query(..., min_length=1, max_length=32), db: Session = Depends(get_db)):
+def get_weekly(
+    nickname: str = Query(..., min_length=1, max_length=32),
+    db: Session = Depends(get_db),
+    guild: Guild = Depends(get_current_guild),
+):
     nick = nickname.strip()
     rows = (
         db.query(WeeklySlot)
         .options(joinedload(WeeklySlot.profession), joinedload(WeeklySlot.role))
-        .filter(WeeklySlot.nickname == nick)
+        .filter(WeeklySlot.guild_id == guild.id, WeeklySlot.nickname == nick)
         .order_by(WeeklySlot.weekday)
         .all()
     )
@@ -407,7 +556,11 @@ def get_weekly(nickname: str = Query(..., min_length=1, max_length=32), db: Sess
 
 
 @app.put("/api/weekly", response_model=WeeklyMemberOut)
-def put_weekly(payload: WeeklyPut, db: Session = Depends(get_db)):
+def put_weekly(
+    payload: WeeklyPut,
+    db: Session = Depends(get_db),
+    guild: Guild = Depends(get_current_guild),
+):
     nick = payload.nickname.strip()
     if not nick:
         raise HTTPException(status_code=400, detail="昵称不能为空")
@@ -421,10 +574,11 @@ def put_weekly(payload: WeeklyPut, db: Session = Depends(get_db)):
         profession, role = lookup_spec(db, slot.profession_key, slot.role_key)
         prepared.append((slot.weekday, profession, role))
 
-    db.query(WeeklySlot).filter(WeeklySlot.nickname == nick).delete()
+    db.query(WeeklySlot).filter(WeeklySlot.guild_id == guild.id, WeeklySlot.nickname == nick).delete()
     for weekday, profession, role in prepared:
         db.add(
             WeeklySlot(
+                guild_id=guild.id,
                 nickname=nick,
                 weekday=weekday,
                 profession_id=profession.id,
@@ -433,14 +587,18 @@ def put_weekly(payload: WeeklyPut, db: Session = Depends(get_db)):
             )
         )
     db.commit()
-    return get_weekly(nickname=nick, db=db)
+    return get_weekly(nickname=nick, db=db, guild=guild)
 
 
 @app.get("/api/weekly/forecast", response_model=WeeklyForecast)
-def weekly_forecast(db: Session = Depends(get_db)):
+def weekly_forecast(
+    db: Session = Depends(get_db),
+    guild: Guild = Depends(get_current_guild),
+):
     rows = (
         db.query(WeeklySlot)
         .options(joinedload(WeeklySlot.profession), joinedload(WeeklySlot.role))
+        .filter(WeeklySlot.guild_id == guild.id)
         .all()
     )
     roles = db.query(Role).order_by(Role.sort_order).all()

@@ -22,26 +22,26 @@
       <section class="panel">
         <h2>{{ t("dailyHeadcount") }}</h2>
         <div class="chart-box">
-          <Gw2Chart v-if="lineData" :key="'line-' + days + locale" type="line" :data="lineData" />
+          <Gw2Chart v-if="lineData" type="line" :data="lineData" />
         </div>
       </section>
       <section class="panel">
         <h2>{{ dayDate }} {{ t("roleShare") }}</h2>
         <div class="chart-box">
-          <Gw2Chart v-if="pieRole" :key="'pie-' + dayDate + locale" type="doughnut" :data="pieRole" @select="onRoleSlice" />
+          <Gw2Chart v-if="pieRole" type="doughnut" :data="pieRole" @select="onRoleSlice" />
         </div>
       </section>
       <section class="panel">
         <h2>{{ dayDate }} {{ t("roleCount") }}</h2>
         <div class="chart-box">
-          <Gw2Chart v-if="barRole" :key="'bar-' + dayDate + locale" type="bar" :data="barRole" @select="onRoleSlice" />
+          <Gw2Chart v-if="barRole" type="bar" :data="barRole" @select="onRoleSlice" />
         </div>
       </section>
       <section class="panel">
         <h2>{{ drillTitle }}</h2>
         <p v-if="selectedRole" class="hint">{{ t("drillHint") }}</p>
         <div class="chart-box">
-          <Gw2Chart v-if="pieDrill" :key="'drill-' + dayDate + '-' + selectedRole + locale" type="doughnut" :data="pieDrill" />
+          <Gw2Chart v-if="pieDrill" type="doughnut" :data="pieDrill" />
         </div>
       </section>
     </div>

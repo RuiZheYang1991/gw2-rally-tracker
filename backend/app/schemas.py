@@ -170,3 +170,22 @@ class ForecastDay(BaseModel):
 
 class WeeklyForecast(BaseModel):
     days: list[ForecastDay]
+
+
+class AuthLogin(BaseModel):
+    guild_name: str = Field(min_length=1, max_length=48)
+    password: str = Field(min_length=1, max_length=64)
+    owner_token: str = ""
+
+
+class AuthOut(BaseModel):
+    token: str = ""
+    guild_name: str
+    created: bool = False
+    is_owner: bool = False
+    owner_token: str = ""
+
+
+class PasswordChange(BaseModel):
+    current_password: str = Field(min_length=1, max_length=64)
+    new_password: str = Field(min_length=1, max_length=64)

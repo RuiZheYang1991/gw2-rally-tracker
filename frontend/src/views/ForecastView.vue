@@ -4,7 +4,7 @@
       <h2>{{ t("forecastTitle") }}</h2>
       <p class="hint">{{ t("forecastHint") }}</p>
       <div class="chart-box">
-        <Gw2Chart v-if="barData" :key="'fc-' + locale" type="bar" :data="barData" :options="barOptions" />
+        <Gw2Chart v-if="barData" type="bar" :data="barData" :options="barOptions" />
       </div>
     </section>
 
