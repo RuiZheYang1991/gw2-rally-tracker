@@ -1,8 +1,8 @@
 {
-	email {$ACME_EMAIL}
+	email {$ACME_EMAIL:d80924gw2@gmail.com}
 }
 
-{$DOMAIN} {
+{$DOMAIN:gw2rally.duckdns.org} {
 	encode gzip
 	reverse_proxy frontend:80
 }
