@@ -33,6 +33,7 @@ def migrate_schema(engine: Engine) -> None:
         _ensure_owner_columns(conn)
         _ensure_guild_id_columns(conn)
         _backfill_legacy_guild(conn)
+        _finish_stale_rebuilds(conn)
         _rebuild_checkin_unique(conn)
         _rebuild_weekly_unique(conn)
         _backfill_duty(conn)
@@ -197,6 +198,24 @@ def _backfill_legacy_guild(conn) -> None:
             )
 
 
+def _drop_if_exists(conn, name: str) -> None:
+    conn.execute(text(f"DROP TABLE IF EXISTS {name}"))
+
+
+def _finish_stale_rebuilds(conn) -> None:
+    """上次迁移中途失败时，可能留下 *_v2 / *_v3 临时表。"""
+    if _table_exists(conn, "checkins_v3"):
+        if _table_exists(conn, "checkins"):
+            _drop_if_exists(conn, "checkins_v3")
+        else:
+            conn.execute(text("ALTER TABLE checkins_v3 RENAME TO checkins"))
+    if _table_exists(conn, "weekly_slots_v2"):
+        if _table_exists(conn, "weekly_slots"):
+            _drop_if_exists(conn, "weekly_slots_v2")
+        else:
+            conn.execute(text("ALTER TABLE weekly_slots_v2 RENAME TO weekly_slots"))
+
+
 def _rebuild_checkin_unique(conn) -> None:
     """同一公会、同一人、同一天可打多个职业+职责；仅相同组合去重。"""
     if not _table_exists(conn, "checkins"):
@@ -216,10 +235,16 @@ def _rebuild_checkin_unique(conn) -> None:
             text("SELECT COUNT(*) FROM checkins WHERE guild_id IS NULL")
         ).scalar()
         if orphans:
-            raise RuntimeError("checkins 仍有未归属公会的记录，请先完成公会回填后再迁移")
+            _backfill_legacy_guild(conn)
+            orphans = conn.execute(
+                text("SELECT COUNT(*) FROM checkins WHERE guild_id IS NULL")
+            ).scalar()
+            if orphans:
+                return
 
     duty_select = "duty" if "duty" in cols else "NULL"
     guild_select = "guild_id" if "guild_id" in cols else "NULL"
+    _drop_if_exists(conn, "checkins_v3")
     conn.execute(
         text(
             """
@@ -279,9 +304,16 @@ def _rebuild_weekly_unique(conn) -> None:
             text("SELECT COUNT(*) FROM weekly_slots WHERE guild_id IS NULL")
         ).scalar()
         if orphans:
-            raise RuntimeError("weekly_slots 仍有未归属公会的记录，请先完成公会回填后再迁移")
+            _backfill_legacy_guild(conn)
+            orphans = conn.execute(
+                text("SELECT COUNT(*) FROM weekly_slots WHERE guild_id IS NULL")
+            ).scalar()
+            if orphans:
+                return
 
     guild_select = "guild_id" if "guild_id" in cols else "NULL"
+    duty_select = "duty" if "duty" in cols else "NULL"
+    _drop_if_exists(conn, "weekly_slots_v2")
     conn.execute(
         text(
             """
@@ -307,7 +339,7 @@ def _rebuild_weekly_unique(conn) -> None:
             f"""
             INSERT INTO weekly_slots_v2
                 (id, guild_id, nickname, weekday, profession_id, role_id, duty)
-            SELECT id, {guild_select}, nickname, weekday, profession_id, role_id, duty
+            SELECT id, {guild_select}, nickname, weekday, profession_id, role_id, {duty_select}
             FROM weekly_slots
             WHERE {guild_select} IS NOT NULL
             """

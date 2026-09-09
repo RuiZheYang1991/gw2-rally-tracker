@@ -29,11 +29,20 @@ else
 fi
 
 echo "==> 重建并启动容器"
+set +e
 if [[ -n "$NO_CACHE" ]]; then
   "${COMPOSE[@]}" build $NO_CACHE
   "${COMPOSE[@]}" up -d
 else
   "${COMPOSE[@]}" up -d --build
+fi
+UP_STATUS=$?
+set -e
+if [[ $UP_STATUS -ne 0 ]]; then
+  echo "==> 启动失败，后端日志：" >&2
+  "${COMPOSE[@]}" logs --tail=80 backend || true
+  echo "前端依赖后端健康检查。可先执行: ${COMPOSE[*]} logs backend" >&2
+  exit "$UP_STATUS"
 fi
 
 echo "==> 当前容器"
