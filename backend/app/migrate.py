@@ -181,8 +181,8 @@ def _backfill_legacy_guild(conn) -> None:
     if not gid:
         conn.execute(
             text(
-                "INSERT INTO guilds (name, name_norm, password_hash) "
-                "VALUES (:name, :norm, '')"
+                "INSERT INTO guilds (name, name_norm, password_hash, owner_token) "
+                "VALUES (:name, :norm, '', '')"
             ),
             {"name": LEGACY_GUILD_NAME, "norm": LEGACY_GUILD_NAME},
         )

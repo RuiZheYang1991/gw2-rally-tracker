@@ -18,8 +18,8 @@ class Guild(Base):
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     name: Mapped[str] = mapped_column(String(48))
     name_norm: Mapped[str] = mapped_column(String(48), unique=True, index=True)
-    password_hash: Mapped[str] = mapped_column(String(256), default="")
-    owner_token: Mapped[str] = mapped_column(String(64), default="")
+    password_hash: Mapped[str] = mapped_column(String(256), default="", server_default="")
+    owner_token: Mapped[str] = mapped_column(String(64), default="", server_default="")
     created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
 
     sessions: Mapped[list["GuildSession"]] = relationship(back_populates="guild")
