@@ -1,5 +1,5 @@
 {
-	email {$ACME_EMAIL:d80924gw2@gmail.com}
+	email {$ACME_EMAIL:you@example.com}
 	# HTTP/3 (QUIC) on some ISPs/home networks stalls large PNGs so icons look missing.
 	servers {
 		protocols h1 h2

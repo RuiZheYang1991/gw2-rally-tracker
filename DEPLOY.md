@@ -70,7 +70,7 @@ nano .env
 
 ```env
 DOMAIN=gw2rally.duckdns.org
-ACME_EMAIL=d80924gw2@gmail.com
+ACME_EMAIL=you@example.com
 DUCKDNS_SUBDOMAIN=gw2rally
 DUCKDNS_TOKEN=
 ```

@@ -6,6 +6,9 @@
 
 仓库：[https://github.com/RuiZheYang1991/gw2-rally-tracker](https://github.com/RuiZheYang1991/gw2-rally-tracker)
 
+- 团员 / 会长怎么用网页：[USER.md](USER.md)
+- 云主机怎么部署：[DEPLOY.md](DEPLOY.md)
+
 ## 功能
 
 | 页面 | 说明 |
