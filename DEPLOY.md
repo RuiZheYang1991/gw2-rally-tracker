@@ -169,6 +169,7 @@ docker compose -f docker-compose.yml -f docker-compose.https.yml -f docker-compo
 
 | 現象 | 處理 |
 | --- | --- |
+| `KeyError: 'ContainerConfig'` / `ERROR: for backend  'ContainerConfig'` | 這是 **docker-compose 1.29.2 + 新版 Docker** 的已知 bug，前端其實已經編好。先裝 V2，再刪舊容器啟動（資料在 `./data/rally.db`，不會丟）：`sudo apt-get install -y docker-compose-v2` 然後 `docker rm -f $(docker ps -aq --filter name=gw2-rally-tracker_backend) $(docker ps -aq --filter name=gw2-rally-tracker_frontend)`，再 `docker compose -f docker-compose.yml -f docker-compose.https.yml -f docker-compose.duckdns.yml up -d` |
 | Let’s Encrypt timeout / Connection refused | GCP 防火牆沒放行 80、443；或 DuckDNS 還指著舊 IP |
 | `Couldn't connect to Docker daemon` | `sudo systemctl start docker`；使用者加入 `docker` 組後重新登入 |
 | 開網域沒反應、`:8080` 卻可以 | 應用在跑，但 443 沒通；查防火牆與 `caddy` 日誌 |
