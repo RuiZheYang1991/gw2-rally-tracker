@@ -5,7 +5,11 @@
       class="prof-img"
       :src="src"
       :alt="professionKey"
+      :width="size"
+      :height="size"
       :style="sizeStyle"
+      loading="eager"
+      decoding="async"
       @error="failed = true"
     />
     <span v-else class="prof-mark" :style="sizeStyle" v-html="mark"></span>

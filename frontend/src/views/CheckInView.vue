@@ -56,14 +56,9 @@
             {{ group.label }}
           </button>
         </div>
-        <section
-          v-for="group in armorGroups"
-          :key="group.armor"
-          class="armor-block"
-          :class="{ 'is-collapsed': armorTab !== group.armor }"
-        >
-          <h3>{{ group.label }}</h3>
-          <div v-for="family in group.families" :key="family.key" class="grid-prof">
+        <section v-if="visibleArmorGroup" class="armor-block">
+          <h3>{{ visibleArmorGroup.label }}</h3>
+          <div v-for="family in visibleArmorGroup.families" :key="family.key" class="grid-prof">
             <button
               v-for="p in family.members"
               :key="p.key"
@@ -160,6 +155,9 @@ function pickProfession(p) {
 watch(professionArmor, (armor) => {
   if (armor) armorTab.value = armor;
 });
+const visibleArmorGroup = computed(
+  () => armorGroups.value.find((g) => g.armor === armorTab.value) || armorGroups.value[0] || null
+);
 const busy = ref(false);
 const message = ref("");
 const isError = ref(false);
@@ -167,6 +165,20 @@ const isError = ref(false);
 async function loadMeta() {
   professions.value = await api.professions();
   roles.value = await api.roles();
+}
+
+function preloadProfessionIcons() {
+  const run = () => {
+    for (const p of professions.value) {
+      const img = new Image();
+      img.src = `/img/professions/${p.key}.png`;
+    }
+  };
+  if (typeof requestIdleCallback === "function") {
+    requestIdleCallback(run, { timeout: 2500 });
+  } else {
+    setTimeout(run, 400);
+  }
 }
 
 async function loadRoster() {
@@ -208,6 +220,7 @@ async function remove(row) {
 onMounted(async () => {
   await loadMeta();
   await loadRoster();
+  preloadProfessionIcons();
 });
 
 watch(rallyDate, loadRoster);

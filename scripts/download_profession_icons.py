@@ -87,10 +87,21 @@ def file_url(title: str) -> str | None:
     return None
 
 
+def shrink(dest: Path, max_px: int = 128) -> None:
+    try:
+        from PIL import Image
+    except ImportError:
+        return
+    im = Image.open(dest).convert("RGBA")
+    im.thumbnail((max_px, max_px), Image.Resampling.LANCZOS)
+    im.save(dest, "PNG", optimize=True)
+
+
 def download(url: str, dest: Path) -> None:
     req = urllib.request.Request(url, headers={"User-Agent": UA})
     with urllib.request.urlopen(req, timeout=60) as resp:
         dest.write_bytes(resp.read())
+    shrink(dest)
 
 
 def candidates(wiki_name: str) -> list[str]:

@@ -327,7 +327,7 @@ select {
 
 .role-card {
   flex-direction: row;
-  justify-content: flex-start;
+  justify-content: center;
   align-items: center;
   padding: 10px 12px;
   gap: 10px;
@@ -386,6 +386,16 @@ select {
   border-color: var(--gold-bright);
   box-shadow: 0 0 16px rgba(232, 195, 106, 0.25);
   background: rgba(232, 195, 106, 0.08);
+}
+
+.prof-card .icon-slot {
+  width: 62px;
+  height: 62px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  line-height: 0;
 }
 
 .prof-card :deep(svg),
@@ -802,7 +812,7 @@ th {
   background: rgba(8, 10, 20, 0.7);
   padding: 10px 8px;
   font-family: var(--font-display);
-  font-size: 13px;
+  font-size: 16.25px;
   letter-spacing: 0.12em;
   color: var(--gold);
 }
