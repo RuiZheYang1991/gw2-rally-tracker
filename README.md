@@ -150,6 +150,8 @@ docker-compose.duckdns.yml DuckDNS 动态解析
 
 适合租用的云虚拟机：安全组放行 **80、443**，DuckDNS 指到该机公网 IP。Caddy 向 Let's Encrypt 申请证书并自动续期。
 
+**完整步骤（GCP Ubuntu 22.04 首次部署 + 之后更新）见 [DEPLOY.md](DEPLOY.md)。**
+
 1. 打开 [https://www.duckdns.org](https://www.duckdns.org)，子域名为 `gw2rally`（即 `gw2rally.duckdns.org`）。token 只写进服务器 `.env`，不要提交 git。
 2. 云厂商安全组 / 防火墙放行 TCP **80、443**（来源 0.0.0.0/0）。
 3. 在项目目录：

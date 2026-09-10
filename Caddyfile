@@ -1,8 +1,22 @@
 {
 	email {$ACME_EMAIL:d80924gw2@gmail.com}
+	# HTTP/3 (QUIC) on some ISPs/home networks stalls large PNGs so icons look missing.
+	servers {
+		protocols h1 h2
+	}
 }
 
 {$DOMAIN:gw2rally.duckdns.org} {
-	encode gzip
-	reverse_proxy frontend:80
+	encode gzip {
+		match {
+			header Content-Type text/*
+			header Content-Type application/javascript*
+			header Content-Type application/json*
+			header Content-Type application/xml*
+			header Content-Type image/svg+xml*
+		}
+	}
+	reverse_proxy frontend:80 {
+		flush_interval -1
+	}
 }
